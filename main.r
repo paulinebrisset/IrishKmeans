@@ -8,83 +8,60 @@ iris_data <- iris[, -5]  # Retirer la colonne 5, qui est "Species"
 # 2. Calculer la matrice du carré de la distance euclidienne entre les individu
 euclidean_distance_matrix <- dist(iris_data, method = "euclidean")^2
 
-#3. Définir une fonction nommée « silPartition » qui calcule l’indice silhouette d’une partition donnée
-silPartition <- function(data, clusters) {
-  library(cluster)
-  
-  # Calculer l'indice silhouette
-  silhouette_result <- silhouette(clusters, dist(data))
-  silhouette_index <- mean(silhouette_result[, "sil_width"])
-  
-  # Retourner la valeur moyenne de l'indice silhouette
-  return(silhouette_index)
+#3. Définir "silPartition" qui calcule l’indice silhouette d’une partition
+silPartition <- function(data, partition) {
+  n <- length(data)
+  silhouette_values <- numeric(n)
+
+  for (i in 1:n) {
+    a_i <- mean_distance_within_cluster(data, partition, i)
+    b_i <- mean_distance_between_clusters(data, partition, i)
+
+    silhouette_values[i] <- silhouette_coefficient(a_i, b_i)
+  }
+
+  partition_silhouette <- mean(silhouette_values)
+  return(partition_silhouette)
+}
+mean_distance_within_cluster <- function(data, clusters, point_index) {
+  cluster_index <- clusters[point_index]
+  cluster_points <- data[clusters == cluster_index, , drop = FALSE]
+  point <- data[point_index, , drop = FALSE]
+
+  if (nrow(cluster_points) > 1) {
+    distances <- sqrt(rowSums((cluster_points - point)^2))
+    return(mean(distances))
+  } else {
+    return(0)
+  }
 }
 
-# Étape 6: Partitionner l'ensemble des individus en 3 classes par le K-Means direct
-k <- 3
-kmeans_result <- kmeans(iris_data, centers = k)
+mean_distance_between_clusters <- function(data, clusters, point_index) {
+  cluster_index <- clusters[point_index]
+  unique_clusters <- unique(clusters)
+  unique_clusters <- unique_clusters[unique_clusters != cluster_index]
+  min_distance <- Inf
 
-# Étape 7: Appliquer la fonction "silPartition" à la partition K-Means
-silhouette_index_kmeans <- silPartition(iris_data, kmeans_result$cluster)
+  for (cluster in unique_clusters) {
+    cluster_points <- data[clusters == cluster, , drop = FALSE]
+    point <- data[point_index, , drop = FALSE]
+    distances <- sqrt(rowSums((cluster_points - point)^2))
+    distance <- mean(distances)
 
-# Étape 8: Définir une fonction "inertieIntraPartition" pour calculer l'inertie intra-classe
-inertieIntraPartition <- function(data, clusters, centroids) {
-  # Calculer les distances euclidiennes au carré de chaque point à son centre de cluster
-  cluster_distances <- apply(data, 1, function(x) sum((x - centroids[clusters,])^2))
-  
-  # Somme des distances au carré à l'intérieur de chaque cluster
-  inertie <- sum(cluster_distances)
-  
-  return(inertie)
+    if (distance < min_distance) {
+      min_distance <- distance
+    }
+  }
+
+  return(min_distance)
 }
 
-# Étape 9: Appliquer la fonction "inertieIntraPartition" à la partition K-Means
-kmeans_inertie <- inertieIntraPartition(iris_data, kmeans_result$cluster, kmeans_result$centers)
-
-# Étape 10: Classification ascendante hiérarchique avec différents liens
-# (a) Lien simple
-single_linkage <- hclust(dist(iris_data), method = "single")
-
-# (b) Lien moyen
-average_linkage <- hclust(dist(iris_data), method = "average")
-
-# (c) Lien complet
-complete_linkage <- hclust(dist(iris_data), method = "complete")
-
-# Étape 11: Définir une fonction "sautMax" pour calculer le niveau de coupure au saut maximum
-sautMax <- function(dendrogram) {
-  hauteurs <- dendrogram$height
-  sauts <- diff(hauteurs)
-  saut_max <- max(sauts)
-  niveau_saut_max <- hauteurs[which.max(sauts) + 1]  # +1 pour obtenir le niveau correct
-  return(niveau_saut_max)
+silhouette_coefficient <- function(a_i, b_i) {
+  if (a_i < b_i) {
+    return(1 - (a_i / b_i))
+  } else if (a_i > b_i) {
+    return(b_i / a_i - 1)
+  } else {
+    return(0)
+  }
 }
-
-# Étape 12: Calculer le saut maximum pour chaque lien
-saut_max_single <- sautMax(single_linkage)
-saut_max_average <- sautMax(average_linkage)
-saut_max_complete <- sautMax(complete_linkage)
-
-# Étape 13: Déterminer les partitions correspondant au saut maximum pour chaque lien
-partition_single <- cutree(single_linkage, h = saut_max_single)
-partition_average <- cutree(average_linkage, h = saut_max_average)
-partition_complete <- cutree(complete_linkage, h = saut_max_complete)
-
-# Étape 14: Calculer l'indice silhouette pour chaque partition
-silhouette_index_single <- silPartition(iris_data, partition_single)
-silhouette_index_average <- silPartition(iris_data, partition_average)
-silhouette_index_complete <- silPartition(iris_data, partition_complete)
-
-# Étape 15: Calculer l'inertie intra-classe pour chaque partition
-inertie_single <- inertieIntraPartition(iris_data, partition_single, tapply(1:nrow(iris_data), partition_single, function(i) colMeans(iris_data[i,])))
-inertie_average <- inertieIntraPartition(iris_data, partition_average, tapply(1:nrow(iris_data), partition_average, function(i) colMeans(iris_data[i,])))
-inertie_complete <- inertieIntraPartition(iris_data, partition_complete, tapply(1:nrow(iris_data), partition_complete, function(i) colMeans(iris_data[i,])))
-
-# Imprimer les résultats
-cat("Silhouette index for Single Linkage partition:", silhouette_index_single, "\n")
-cat("Silhouette index for Average Linkage partition:", silhouette_index_average, "\n")
-cat("Silhouette index for Complete Linkage partition:", silhouette_index_complete, "\n")
-cat("Intra-class inertia for K-Means partition:", kmeans_inertie, "\n")
-cat("Intra-class inertia for Single Linkage partition:", inertie_single, "\n")
-cat("Intra-class inertia for Average Linkage partition:", inertie_average, "\n")
-cat("Intra-class inertia for Complete Linkage partition:", inertie_complete

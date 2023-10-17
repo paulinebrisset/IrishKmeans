@@ -1,0 +1,168 @@
+---
+title: "Iris de Fisher"
+output: html_notebook
+---
+
+# Bibliothèques "stats" pour K-means et dendextend pour le saut max
+```{r}
+library(stats)
+library(dendextend)
+```
+# Bibliothèque "datasets" et données Iris
+```{r}
+library(datasets)
+data(iris)
+```
+# 1. Retirer la colonne classe des données
+```{r}
+iris_data <- iris[, -5]  # colonne 5 = "Species"
+```
+# 2. Calculer la matrice du carré de la distance euclidienne entre les individus
+```{r}
+euclidean_distance_matrix <- dist(iris_data, "euclidean", FALSE, FALSE, p = 2)^2
+```
+# 3. Définir "silPartition" qui calcule l’indice silhouette d’une partition
+# WSS
+```{r}
+mean_distance_within_cluster <- function(matrix, clusters, point_index) {
+  cluster_index <- clusters[point_index]
+  cluster_points <- matrix[clusters == cluster_index, ]
+  point <- matrix[point_index, ]
+  distances <- sqrt(rowSums((cluster_points - point)^2))
+  return(mean(distances))
+}
+```
+# BSS
+```{r}
+mean_distance_between_clusters <- function(matrix, clusters, point_index) {
+  cluster_index <- clusters[point_index]
+  unique_clusters <- unique(clusters)
+  unique_clusters <- unique_clusters[unique_clusters != cluster_index]
+  min_distance <- Inf
+
+  for (cluster in unique_clusters) {
+    cluster_points <- matrix[clusters == cluster, ]
+    point <- matrix[point_index, ]
+    distances <- sqrt(rowSums((cluster_points - point)^2))
+    distance <- mean(distances)
+
+    if (distance < min_distance) {
+      min_distance <- distance
+    }
+  }
+
+  return(min_distance)
+}
+```
+# Calcul silhouette
+```{r}
+silhouette_coefficient <- function(a, b) {
+  if (a < b) {
+    return(1 - (a / b))
+  } else if (a > b) {
+    return((b - a) / b)
+  }
+}
+
+get_silhouette_values <- function(matrix, partition) {
+  n <- nrow(matrix)
+  silhouette_values <- numeric(n)
+
+  for (i in 1:n) {
+    a <- mean_distance_within_cluster(matrix, partition, i)
+    b <- mean_distance_between_clusters(matrix, partition, i)
+    silhouette_values[i] <- silhouette_coefficient(a, b)
+  }
+  return(silhouette_values)
+}
+```
+# silPartion
+```{r}
+silPartition <- function(matrix, partition) {
+  silhouette_values <- get_silhouette_values(matrix, partition)
+  partition_silhouette <- mean(silhouette_values, na.rm = TRUE)
+  return(partition_silhouette)
+}
+```
+# 4. Partitionner l’ensemble des individus en 3 classes par le K-Means direct
+```{r}
+k <- 3
+kmeans_result <- kmeans(euclidean_distance_matrix, centers = k)
+cluster_assignments <- kmeans_result$cluster
+plot(cluster_assignments)
+```
+# 5. Appliquer à la partition obtenue la fonction « silPartition »
+```{r}
+silhouette_index <- silPartition(as.matrix(euclidean_distance_matrix), cluster_assignments)
+plot(silhouette_index)
+cat("Indice silhouette de la partition K-means :", silhouette_index, "\n")
+```
+#6. Définir une fonction nommée « inertieIntraPartition » qui calcule l’inertie intra-classe d’une partition donnée
+```{r}
+inertieIntraPartition <- function(euclidean_distance_matrix, partition) {
+  n <- nrow(euclidean_distance_matrix)
+  k <- max(partition)  # Nombre de clusters
+  inertia <- 0
+
+  for (cluster in 1:k) {
+    cluster_indices <- which(partition == cluster)
+    if (length(cluster_indices) > 0) {
+      cat("cluster indices", cluster_indices, "\n")
+      cluster_data <- euclidean_distance_matrix[cluster_indices, ]
+      cluster_center <- colMeans(cluster_data)
+      distances <- sqrt(rowSums((cluster_data - cluster_center)^2))
+      inertia <- inertia + sum(distances^2)
+    }
+  }
+  return(inertia)
+}
+```
+# 7. Appliquer à la partition la fonction « inertieIntraPartition ».
+```{r}
+inertie <- inertieIntraPartition(as.matrix(euclidean_distance_matrix), cluster_assignments)
+cat("Inertie intra-classe de la partition :", inertie, "\n")
+```
+# 8. En utilisant la fonction « hclust », effectuer une classification ascendante hiérarchique de l’ensemble des individus par :
+# (a) le lien simple ;
+```{r}
+cah_simple <- hclust(euclidean_distance_matrix, method = "single")
+# Afficher le dendrogramme du lien simple
+plot(cah_simple, main = "Lien simple")
+```
+```{r}
+cah_mean <- hclust(euclidean_distance_matrix, method = "average")
+plot(cah_mean, main = "Lien moyen")
+```
+```{r}
+cah_complete <- hclust(euclidean_distance_matrix, method = "complete")
+plot(cah_complete, main = "Lien complet")
+```
+# 9. Définir une fonction nommée « sautMax » qui calcule le niveau de coupure correspondant au saut maximum de l’indice de niveau d’une hiérarchie indicée obtenue par « hclust ».
+```{r}
+sautMax <- function(hclust_obj) {
+  dend <- as.dendrogram(hclust_obj)
+  # heights <- attr(dend, "height")
+  heights <- get_branches_heights(dend)
+  max_jump <- max(heights)
+  return(max_jump)
+}
+```
+# 10. Dans chacun des cas de la question (8), déterminer la partition correspondant au saut maximum de l’indice de niveau
+# (a) Lien simple
+```{r}
+cut_height_simple <- sautMax(cah_simple)
+partition_simple <- cutree(cah_simple, h = cut_height_simple)
+```
+# (b) Lien moyen
+```{r}
+cut_height_mean <- sautMax(cah_mean)
+partition_mean <- cutree(cah_mean, h = cut_height_mean)
+cat("Partition saut max (Lien moyen) :", partition_mean, "\n")
+plot(cah_mean, main = paste("Mean (Cut Height =", cut_height_mean, ")"))
+```
+# (c) Lien complet
+```{r}
+cut_height_complete <- sautMax(cah_complete)
+partition_complete <- cutree(cah_complete, h = cut_height_complete)
+```
+

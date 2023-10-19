@@ -19,12 +19,16 @@ Aim: Develop a R program to apply k-means algorithm on Iris to excute with R stu
 
 # Installation
 ## Requirements
-To set up and run this project on your system, make sure you have R and RStudio installed. 
+To set up and run this project on your system, make sure you have R and RStudio installed. Necessary packages are imported at the execution of the file. 
+   ```
+   install.packages("dendextend")
+   ```
 
 ## Installation Steps
    You can start by cloning this repository to your local machine using Git. Open your terminal or command prompt and run the following command:
    ```bash
    git clone https://github.com/paulinebrisset/IrishKmeans.git
 ``` 
+
 # Contributors
 - [Pauline Moncoiffé-Brisset](https://github.com/paulinebrisset)

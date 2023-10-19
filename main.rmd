@@ -1,6 +1,7 @@
 ---
 title: "Iris de Fisher"
 output: html_notebook
+
 ---
 
 # Bibliothèques "stats" pour K-means et dendextend pour le saut max
@@ -87,13 +88,19 @@ silPartition <- function(matrix, partition) {
 # 4. Partitionner l’ensemble des individus en 3 classes par le K-Means direct
 ```{r}
 k <- 3
+# Utiliser les données Iris direct et pas le carré des distances euclidiennes
 kmeans_result <- kmeans(euclidean_distance_matrix, centers = k)
+print(kmeans_result)
+# afficher l'intertie intra classe
+print(kmeans_result$tot.withinss)
 cluster_assignments <- kmeans_result$cluster
 plot(cluster_assignments)
 ```
 # 5. Appliquer à la partition obtenue la fonction « silPartition »
 ```{r}
+# Appeler silhouette avec les données dans la matrice des carrés
 silhouette_index <- silPartition(as.matrix(euclidean_distance_matrix), cluster_assignments)
+# Bériche trouve 0.5528
 plot(silhouette_index)
 cat("Indice silhouette de la partition K-means :", silhouette_index, "\n")
 ```
@@ -144,6 +151,7 @@ sautMax <- function(hclust_obj) {
   # heights <- attr(dend, "height")
   heights <- get_branches_heights(dend)
   max_jump <- max(heights)
+  print(max_jump)
   return(max_jump)
 }
 ```
@@ -151,14 +159,16 @@ sautMax <- function(hclust_obj) {
 # (a) Lien simple
 ```{r}
 cut_height_simple <- sautMax(cah_simple)
+print(cah_simple)
 partition_simple <- cutree(cah_simple, h = cut_height_simple)
+plot(partition_simple, main = "Lien simple avec cutree")
 ```
 # (b) Lien moyen
 ```{r}
 cut_height_mean <- sautMax(cah_mean)
 partition_mean <- cutree(cah_mean, h = cut_height_mean)
 cat("Partition saut max (Lien moyen) :", partition_mean, "\n")
-plot(cah_mean, main = paste("Mean (Cut Height =", cut_height_mean, ")"))
+plot(partition_mean, main = paste("Mean (Cut Height =", cut_height_mean, ")"))
 ```
 # (c) Lien complet
 ```{r}

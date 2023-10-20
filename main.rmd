@@ -1,5 +1,5 @@
 ---
-title: "Iris de Fisher"
+title: "K-means avec Iris de Fisher"
 output: html_notebook
 author :  "Pauline Moncoiffé-Brisset"
 student_number : 43006993
@@ -30,7 +30,7 @@ euclidean_distance_matrix <- dist(iris_data, "euclidean", FALSE, FALSE, p = 2)^2
 ## Elle calcule l’indice silhouette d’une partition donnée
 ```{r}
 silPartition <- function(partition, distance_matrix){ 
-  # Doc : https://www.rdocumentation.org/packages/cluster/versions/2.1.4/topics/silhouette
+  # Used doc : https://www.rdocumentation.org/packages/cluster/versions/2.1.4/topics/silhouette
   indice_silhouette <- silhouette(partition, dist(distance_matrix))
   return(indice_silhouette)
 }
@@ -38,25 +38,24 @@ silPartition <- function(partition, distance_matrix){
 # 4. Partitionner l’ensemble des individus en 3 classes par le K-Means direct
 ```{r}
 k <- 3
+# Used doc : https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/kmeans
 kmeans_result <- kmeans(iris_data, centers = k)
 kmeans_result
 cluster_assignments <- kmeans_result$cluster
 ```
 # 5. Appliquer à la partition obtenue la fonction « silPartition »
 ```{r}
-# Appeler silhouette avec les données dans la matrice des carrés
 silhouette_index <- silPartition(cluster_assignments, euclidean_distance_matrix)
 mean_sil_width <- mean(silhouette_index[, "sil_width"])
-cat("Mean Silhouette Width: ", mean_sil_width, "\n")
 # Bériche trouve 0.5528
 cat("Indice silhouette de la partition K-means :", silhouette_index, "\n")
 ```
 # 6. Définir une fonction nommée « inertieIntraPartition » qui calcule l’inertie intra-classe d’une partition donnée
 ```{r}
 inertieIntraPartition <- function(result) {
-  # Doc https://stat.ethz.ch/R-manual/R-devel/library/stats/html/kmeans.html
-  # tot.withinss Total within-cluster sum of squares, i.e. sum(withinss)
-  return (result$tot.withinss)
+  # Used doc : https://stat.ethz.ch/R-manual/R-devel/library/stats/html/kmeans.html
+  # Used doc : tot.withinss Total within-cluster sum of squares, i.e. sum(withinss)
+  return(result$tot.withinss)
 }
 ```
 # 7. Appliquer à la partition la fonction « inertieIntraPartition ».
@@ -67,27 +66,27 @@ inertie <- inertieIntraPartition(kmeans_result)
 ## (a) le lien simple ;
 ```{r}
 cah_simple <- hclust(euclidean_distance_matrix, method = "single")
-# Afficher le dendrogramme du lien simple
-plot(cah_simple, main = "Lien simple")
+# Décommenter pour afficher le dendrogramme du lien simple
+# plot(cah_simple, main = "Lien simple")
 ```
 ## (b) le lien moyen ;
 ```{r}
 cah_average <- hclust(euclidean_distance_matrix, method = "average")
-plot(cah_average, main = "Lien moyen")
+# Décommenter pour afficher le dendrogramme du lien moeyn
+# plot(cah_average, main = "Lien moyen")
 ```
 ## (c) le lien complet ;
 ```{r}
 cah_complete <- hclust(euclidean_distance_matrix, method = "complete")
-plot(cah_complete, main = "Lien complet")
+# Décommenter pour afficher le dendrogramme du lien complet
+# plot(cah_complete, main = "Lien complet")
 ```
 # 9. Définir une fonction nommée « sautMax » qui calcule le niveau de coupure correspondant au saut maximum de l’indice de niveau d’une hiérarchie indicée obtenue par « hclust ».
 ```{r}
 sautMax <- function(hclust_obj) {
   dend <- as.dendrogram(hclust_obj)
-  # heights <- attr(dend, "height")
   heights <- get_branches_heights(dend)
   max_jump <- max(heights)
-  print(max_jump)
   return(max_jump)
 }
 ```
@@ -95,106 +94,131 @@ sautMax <- function(hclust_obj) {
 # (a) Lien simple
 ```{r}
 cut_height_simple <- sautMax(cah_simple)
-plot(cah_simple, main = "Where we cut the simple link dendrogram")
-# Doc : https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/rect.hclust
-rect.hclust(cah_simple, h = cut_height_simple)
 
-# CUT https://stackoverflow.com/questions/41992119/cut-a-dendrogram
+# Used doc : https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/rect.hclust
+# Décommenter pour afficher le dendrogramme coupé du lien simple
+# plot(cah_simple, main = "Where we cut the simple link dendrogram")
+# rect.hclust(cah_simple, h = cut_height_simple)
+
+# Used doc : CUT https://stackoverflow.com/questions/41992119/cut-a-dendrogram
 cut_simple_dend <- cut(as.dendrogram(cah_simple), h= cut_height_simple)$lower[[2]]
-plot(cut_simple_dend, main="Simple link dendrogram cut")
 
-
+# Décommenter pour afficher le dendrogramme coupé du lien simple
+# plot(cut_simple_dend, main="Simple link dendrogram cut")
 ```
 # (b) Lien moyen
 ```{r}
 cut_height_average <- sautMax(cah_average)
-plot(cah_average, main = "Where we cut the average link dendrogram")
-# Doc : https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/rect.hclust
-rect.hclust(cah_average, h = cut_height_average)
+# Used doc : https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/rect.hclust
+# Décommenter pour afficher le dendrogramme qui montrer la coupure du lien moyen
+# plot(cah_average, main = "Where we cut the average link dendrogram")
+# rect.hclust(cah_average, h = cut_height_average)
 
 # CUT https://stackoverflow.com/questions/41992119/cut-a-dendrogram
 cut_average_dend <- cut(as.dendrogram(cah_average), h= cut_height_average)$lower[[2]]
-plot(cut_average_dend, main="Average link dendrogram cut")
+# Décommenter pour afficher le dendrogramme du lien moyen coupé
+# plot(cut_average_dend, main="Average link dendrogram cut")
 ```
 # (c) Lien complet
 ```{r}
 cut_height_complete <- sautMax(cah_complete)
-plot(cah_complete, main = "Where we cut the complete link dendrogram")
-rect.hclust(cah_complete, h = cut_height_complete)
+# plot(cah_complete, main = "Where we cut the complete link dendrogram")
+# rect.hclust(cah_complete, h = cut_height_complete)
 cut_complete_dend <- cut(as.dendrogram(cah_complete), h= cut_height_complete)$lower[[2]]
-plot(cut_complete_dend, main="Complete link dendrogram cut")
+# Décommenter pour afficher le dendrogramme du lien complet coupé
+# plot(cut_complete_dend, main="Complete link dendrogram cut")
 ```
 # 11. Calculer l’indice silhouette de chacune des partitions obtenues à la question (10)
 ## compute_sil
+### WSS
 ```{r}
-#WSS
-mean_distance_within_cluster <- function(matrix, clusters, point_index) {
-  cluster_index <- clusters[point_index]
-  cluster_points <- data[clusters == cluster_index, ]
+mean_distance_within_cluster <- function(data, clusters, point_index) {
+  # Current point
   point <- data[point_index, ]
-  cluster_points <- matrix[clusters == cluster_index, ]
-  point <- matrix[point_index, ]
-  distances <- sqrt(rowSums((cluster_points - point)^2))
-  return(mean(distances))
-}
-
-#BSS
-mean_distance_between_clusters <- function(matrix, clusters, point_index) {
+  # Get point's cluster
   cluster_index <- clusters[point_index]
-  unique_clusters <- unique(clusters)
-  unique_clusters <- unique_clusters[unique_clusters != cluster_index]
-  min_distance <- Inf
-
-  for (cluster in unique_clusters) {
-    cluster_points <- data[clusters == cluster, ]
-    point <- data[point_index, ]
-    cluster_points <- matrix[clusters == cluster, ]
-    point <- matrix[point_index, ]
-    distances <- sqrt(rowSums((cluster_points - point)^2))
-    distance <- mean(distances)
-  return(min_distance)
+  # ALl point which have the same cluster
+  cluster_points <- data[clusters == cluster_index, ]
+  distances <- numeric(length(cluster_points))
+  # Compute distances
+  for (i in seq_along(cluster_points)) {
+    distances[i] <- sqrt(sum((cluster_points[i,] - point)^2))
+  }
+  mean_distance <- mean(distances)
+  return(mean_distance)
 }
 
+```
+### BSS
+```{r}
+mean_distance_between_clusters <- function(data, clusters, point_index) {
+  # Get point's cluster
+  cluster_index <- clusters[point_index]
+  # Cluster different from the point's cluster
+  diff_clusters <- unique(clusters[clusters != cluster_index])
+  # Initialize the sum of distances and the count of clusters
+  distances <- numeric(length(data[clusters != diff_clusters, ]))
+  sum_distances <- 0
+  num_clusters <- length(diff_clusters)
+  for (cluster in diff_clusters) {
+    # Gets points for the current cluster
+    cluster_points <- data[clusters == cluster, ]
+    # Select the current point
+    point <- data[point_index, ]
+    # Compute distance
+    for (i in seq_along(cluster_points)) {
+      distances[i] <- sqrt(sum((cluster_points[i,] - point)^2))
+    }
+    cluster_mean_distance <- mean(distances)
+    # Add to the sum of distances
+    sum_distances <- sum_distances + cluster_mean_distance
+  }
+  mean_distance <- sum_distances / num_clusters
+  return(mean_distance)
+}
+```
+### Compute silhouette for a point
+```{r}
 silhouette_coefficient <- function(a, b) {
+  a
+  b
   if (a < b) {
     return(1 - (a / b))
   } else if (a > b) {
     return(b / a - 1)
-
-get_silhouette_values <- function(matrix, partition) {
-  n <- nrow(matrix)
+  }
+}
+```
+### Loop throught points
+```{r}
+get_silhouette_values <- function(data, partition) {
+  n <- nrow(data)
   silhouette_values <- numeric(n)
 
   for (i in 1:n) {
-    a <- mean_distance_within_cluster(matrix, partition, i)
-    b <- mean_distance_between_clusters(matrix, partition, i)
+    a <- mean_distance_within_cluster(data, partition, i)
+    a
+    b <- mean_distance_between_clusters(data, partition, i)
     silhouette_values[i] <- silhouette_coefficient(a, b)
   }
   return(silhouette_values)
 }
+
 # Compute silhouette for a partition
-compute_sil <- function(matrix, partition) {
-  silhouette_values <- get_silhouette_values(matrix, partition)
-  partition_silhouette <- mean(silhouette_values, na.rm = TRUE)
+compute_sil <- function(data, partition) {
+  silhouette_values <- get_silhouette_values(data, partition)
+  partition_silhouette <- mean(silhouette_values)
   return(partition_silhouette)
 }
 ```
 ## (a) Lien simple
 ```{r}
 cah_simple$cluster <- cutree(cut_simple_dend, k = 3)
-cah_simple$cluster
-var <- as.cluster(cah_simple)
-var
-silhouette_index_simple <- compute_sil(euclidean_distance_matrix, var)
+silhouette_index_simple <- compute_sil(iris_data, cah_simple$cluster)
 cat("Silhouette Index for Single Linkage:", silhouette_index_simple, "\n")
-silhouette_index_simple
 ```
 ## (b) Lien moyen
-```{r}
-```` 
 ## (c) Lien complet
-```{r}
-```
 # 12. Calculer l’inertie intra-classe de chacune des partitions obtenues à la question (10)
 ## (a) Lien simple
 ## (b) Lien moyen

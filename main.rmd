@@ -114,14 +114,18 @@ rect.hclust(cah_average, h = cut_height_average)
 
 # CUT https://stackoverflow.com/questions/41992119/cut-a-dendrogram
 cut_average_dend <- cut(as.dendrogram(cah_average), h= cut_height_average)$lower[[2]]
-cut_average_dend
 plot(cut_average_dend, main="Average link dendrogram cut")
 ```
 # (c) Lien complet
 ```{r}
 cut_height_complete <- sautMax(cah_complete)
-partition_complete <- cutree(cah_complete, h = cut_height_complete)
-cat("Partition at maximum jump (Complete Linkage):", partition_complete, "\n")
+plot(cah_complete, main = "Where we cut the complete link dendrogram")
+rect.hclust(cah_complete, h = cut_height_complete)
+
+# CUT https://stackoverflow.com/questions/41992119/cut-a-dendrogram
+cut_complete_dend <- cut(as.dendrogram(cah_complete), h= cut_height_average)$lower[[2]]
+plot(cut_complete_dend, main="Complete link dendrogram cut")
+
 ```
 
 # 11. Calculer l’indice silhouette de chacune des partitions obtenues à la question (10)

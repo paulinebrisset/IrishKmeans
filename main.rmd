@@ -29,9 +29,9 @@ euclidean_distance_matrix <- dist(iris_data, "euclidean", FALSE, FALSE, p = 2)^2
 # 3. Définir une fonction nommée « silPartition » 
 ## Elle calcule l’indice silhouette d’une partition donnée
 ```{r}
-silPartition <- function(partition){ 
+silPartition <- function(partition, distance_matrix){ 
   # Doc : https://www.rdocumentation.org/packages/cluster/versions/2.1.4/topics/silhouette
-  indice_silhouette <- silhouette(partition, dist(euclidean_distance_matrix))
+  indice_silhouette <- silhouette(partition, dist(distance_matrix))
   return(indice_silhouette)
 }
 ```
@@ -45,7 +45,7 @@ cluster_assignments <- kmeans_result$cluster
 # 5. Appliquer à la partition obtenue la fonction « silPartition »
 ```{r}
 # Appeler silhouette avec les données dans la matrice des carrés
-silhouette_index <- silPartition(cluster_assignments)
+silhouette_index <- silPartition(cluster_assignments, euclidean_distance_matrix)
 mean_sil_width <- mean(silhouette_index[, "sil_width"])
 cat("Mean Silhouette Width: ", mean_sil_width, "\n")
 # Bériche trouve 0.5528
@@ -121,17 +121,80 @@ plot(cut_average_dend, main="Average link dendrogram cut")
 cut_height_complete <- sautMax(cah_complete)
 plot(cah_complete, main = "Where we cut the complete link dendrogram")
 rect.hclust(cah_complete, h = cut_height_complete)
-
-# CUT https://stackoverflow.com/questions/41992119/cut-a-dendrogram
-cut_complete_dend <- cut(as.dendrogram(cah_complete), h= cut_height_average)$lower[[2]]
+cut_complete_dend <- cut(as.dendrogram(cah_complete), h= cut_height_complete)$lower[[2]]
 plot(cut_complete_dend, main="Complete link dendrogram cut")
-
 ```
-
 # 11. Calculer l’indice silhouette de chacune des partitions obtenues à la question (10)
+## compute_sil
+```{r}
+#WSS
+mean_distance_within_cluster <- function(matrix, clusters, point_index) {
+  cluster_index <- clusters[point_index]
+  cluster_points <- data[clusters == cluster_index, ]
+  point <- data[point_index, ]
+  cluster_points <- matrix[clusters == cluster_index, ]
+  point <- matrix[point_index, ]
+  distances <- sqrt(rowSums((cluster_points - point)^2))
+  return(mean(distances))
+}
+
+#BSS
+mean_distance_between_clusters <- function(matrix, clusters, point_index) {
+  cluster_index <- clusters[point_index]
+  unique_clusters <- unique(clusters)
+  unique_clusters <- unique_clusters[unique_clusters != cluster_index]
+  min_distance <- Inf
+
+  for (cluster in unique_clusters) {
+    cluster_points <- data[clusters == cluster, ]
+    point <- data[point_index, ]
+    cluster_points <- matrix[clusters == cluster, ]
+    point <- matrix[point_index, ]
+    distances <- sqrt(rowSums((cluster_points - point)^2))
+    distance <- mean(distances)
+  return(min_distance)
+}
+
+silhouette_coefficient <- function(a, b) {
+  if (a < b) {
+    return(1 - (a / b))
+  } else if (a > b) {
+    return(b / a - 1)
+
+get_silhouette_values <- function(matrix, partition) {
+  n <- nrow(matrix)
+  silhouette_values <- numeric(n)
+
+  for (i in 1:n) {
+    a <- mean_distance_within_cluster(matrix, partition, i)
+    b <- mean_distance_between_clusters(matrix, partition, i)
+    silhouette_values[i] <- silhouette_coefficient(a, b)
+  }
+  return(silhouette_values)
+}
+# Compute silhouette for a partition
+compute_sil <- function(matrix, partition) {
+  silhouette_values <- get_silhouette_values(matrix, partition)
+  partition_silhouette <- mean(silhouette_values, na.rm = TRUE)
+  return(partition_silhouette)
+}
+```
 ## (a) Lien simple
+```{r}
+cah_simple$cluster <- cutree(cut_simple_dend, k = 3)
+cah_simple$cluster
+var <- as.cluster(cah_simple)
+var
+silhouette_index_simple <- compute_sil(euclidean_distance_matrix, var)
+cat("Silhouette Index for Single Linkage:", silhouette_index_simple, "\n")
+silhouette_index_simple
+```
 ## (b) Lien moyen
+```{r}
+```` 
 ## (c) Lien complet
+```{r}
+```
 # 12. Calculer l’inertie intra-classe de chacune des partitions obtenues à la question (10)
 ## (a) Lien simple
 ## (b) Lien moyen
